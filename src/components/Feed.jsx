@@ -2,34 +2,37 @@ import { useState, useRef } from "react";
 import VideoCard from "./VideoCard";
 import { posts } from "../data/content";
 
-const H = () => window.innerHeight;
-
 export default function Feed() {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef(null);
+  const ticking = useRef(false);
 
   const handleScroll = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    const idx = Math.round(el.scrollTop / H());
-    if (idx !== activeIndex) setActiveIndex(idx);
+    if (ticking.current) return;
+    ticking.current = true;
+    requestAnimationFrame(() => {
+      const el = containerRef.current;
+      if (el) {
+        const idx = Math.round(el.scrollTop / el.clientHeight);
+        setActiveIndex(idx);
+      }
+      ticking.current = false;
+    });
   };
-
-  const h = H();
 
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
       style={{
-        width: "100%",
-        height: h,
+        position: "fixed",
+        inset: 0,
         overflowY: "scroll",
         overflowX: "hidden",
         scrollSnapType: "y mandatory",
         WebkitOverflowScrolling: "touch",
         scrollbarWidth: "none",
-        flexShrink: 0,
+        msOverflowStyle: "none",
       }}
     >
       {posts.map((post, i) => (
@@ -37,7 +40,7 @@ export default function Feed() {
           key={post.id}
           style={{
             width: "100%",
-            height: h,
+            height: "100vh",
             flexShrink: 0,
             scrollSnapAlign: "start",
             scrollSnapStop: "always",

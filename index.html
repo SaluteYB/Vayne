@@ -3,40 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-
     <title>英语打卡 · 每日学英语</title>
-    <meta name="description" content="每天打卡学英语，打字练习，积累词汇，养成好习惯" />
-
-    <!-- iOS PWA 必须配置 -->
+    <meta name="theme-color" content="#080808" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="英语打卡" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-    <!-- iPhone 各尺寸启动图（黑色背景） -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-    <!-- Theme color -->
-    <meta name="theme-color" content="#0a0a0a" />
-    <meta name="msapplication-TileColor" content="#0a0a0a" />
-
-    <!-- Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-
-    <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-
-    <!-- Prevent text size adjustment on rotation -->
     <style>
-      html { -webkit-text-size-adjust: 100%; }
-      body { margin: 0; background: #0a0a0a; }
-      /* Safe area for iPhone notch / Dynamic Island */
-      :root {
-        --safe-top: env(safe-area-inset-top);
-        --safe-bottom: env(safe-area-inset-bottom);
-      }
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; background: #080808; }
+      #root { height: 100%; }
     </style>
+    <!-- Unregister any stale service workers immediately -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
