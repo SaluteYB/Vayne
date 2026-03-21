@@ -17,61 +17,46 @@ export default function App() {
   const isFeed = activeTab === "feed";
 
   return (
-    // Full-screen fixed container — avoids ALL height inheritance issues on iOS
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      background: isFeed ? "#000" : "#0a0a0a",
-      color: "#f1f5f9",
-      display: "flex",
-      flexDirection: "column",
-    }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#0a0a0a", color: "#fff" }}>
 
-      {/* Header — overlaid (transparent) on feed, solid on other tabs */}
-      <div style={{
-        position: isFeed ? "absolute" : "relative",
-        top: 0, left: 0, right: 0,
-        zIndex: 50,
-        paddingTop: "env(safe-area-inset-top)",
-        background: isFeed ? "transparent" : "rgba(10,10,10,0.95)",
-        backdropFilter: isFeed ? "none" : "blur(12px)",
-        borderBottom: isFeed ? "none" : "1px solid rgba(255,255,255,0.08)",
+      {/* Nav header — overlays feed, solid on other pages */}
+      <nav style={{
         flexShrink: 0,
+        position: isFeed ? "fixed" : "relative",
+        top: 0, left: 0, right: 0,
+        zIndex: 100,
+        paddingTop: "env(safe-area-inset-top)",
+        background: isFeed
+          ? "linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)"
+          : "rgba(15,15,15,0.98)",
+        borderBottom: isFeed ? "none" : "1px solid rgba(255,255,255,0.08)",
       }}>
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", height: 50 }}>
-            <span style={{ fontWeight: 700, fontSize: 17, color: "#fff" }}>英语打卡</span>
-            <nav style={{ display: "flex", marginLeft: "auto", gap: 2 }}>
-              {tabs.map(({ id, label }) => {
-                const active = activeTab === id;
-                return (
-                  <button key={id} onClick={() => setActiveTab(id)} style={{
-                    padding: "6px 12px", borderRadius: 8, border: "none",
-                    background: active ? "rgba(255,255,255,0.15)" : "none",
-                    color: active ? "#fff" : "rgba(255,255,255,0.45)",
-                    fontWeight: active ? 600 : 400, fontSize: 14,
-                    cursor: "pointer", transition: "all 0.15s",
-                  }}>
-                    {label}
-                  </button>
-                );
-              })}
-            </nav>
+        <div style={{ display: "flex", alignItems: "center", height: 50, maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
+          <span style={{ fontWeight: 700, fontSize: 17, color: "#fff" }}>英语打卡</span>
+          <div style={{ display: "flex", marginLeft: "auto", gap: 2 }}>
+            {tabs.map(({ id, label }) => {
+              const active = activeTab === id;
+              return (
+                <button key={id} onClick={() => setActiveTab(id)} style={{
+                  padding: "6px 12px", borderRadius: 8, border: "none",
+                  background: active ? "rgba(255,255,255,0.18)" : "none",
+                  color: active ? "#fff" : "rgba(255,255,255,0.45)",
+                  fontWeight: active ? 600 : 400, fontSize: 14,
+                  cursor: "pointer",
+                }}>
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Content area */}
+      {/* Page content */}
       {isFeed ? (
-        // Feed is absolute and covers the whole screen
         <Feed />
       ) : (
-        <div style={{
-          flex: 1,
-          overflowY: "auto",
-          minHeight: 0,
-          WebkitOverflowScrolling: "touch",
-        }}>
+        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
             {activeTab === "typing" && <Typing />}
             {activeTab === "checkin" && <CheckIn />}
