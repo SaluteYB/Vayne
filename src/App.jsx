@@ -26,6 +26,7 @@ export default function App() {
         background: "rgba(10,10,10,0.92)",
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
+        paddingTop: "env(safe-area-inset-top)",
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
           <div style={{ display: "flex", alignItems: "center", height: 52 }}>
