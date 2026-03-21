@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Bookmark, ChevronRight } from "lucide-react";
 
 const fmt = (n) =>
@@ -27,8 +27,10 @@ export default function VideoCard({ post, isActive, cardIndex }) {
   const sub = post.subtitles[subIdx];
   const total = post.subtitles.length;
 
-  // Reset on slide-away
-  if (!isActive && subIdx !== 0) setSubIdx(0);
+  // Reset subtitle index when card scrolls away
+  useEffect(() => {
+    if (!isActive) setSubIdx(0);
+  }, [isActive]);
 
   const handleTap = () => setSubIdx(i => (i + 1) % total);
 
