@@ -31,7 +31,7 @@ export default function Profile() {
             B2
           </div>
         </div>
-        <div className="text-xl font-bold mb-1">小姐同学</div>
+        <div className="text-xl font-bold mb-1">salute</div>
         <div className="text-gray-400 text-sm mb-4">每天进步一点点 ✨</div>
         <button className="px-8 py-2 rounded-full bg-blue-600 text-white text-sm font-medium">
           编辑资料

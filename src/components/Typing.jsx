@@ -1,21 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RotateCcw, Trophy, Zap, Target, ChevronRight } from "lucide-react";
-import { typingChallenges } from "../data/content";
+import { posts } from "../data/content";
 
-function ResultCard({ wpm, accuracy, target, onNext, onRetry }) {
-  const passed = wpm >= target;
+// Extract all dialogue lines from posts as typing challenges
+const challenges = posts.flatMap(post =>
+  post.content.en.map((line, i) => ({
+    id: `${post.id}-${i}`,
+    text: line.text,
+    zh: post.content.zh[i].text,
+    scene: post.user.name,
+    role: line.role,
+    accent: post.accent,
+    tags: post.tags,
+  }))
+);
+
+function ResultCard({ wpm, accuracy, onNext, onRetry }) {
+  const passed = wpm >= 25;
   return (
     <div className="slide-up flex flex-col items-center gap-6 p-6">
-      <div className={`text-6xl bounce-in ${passed ? "" : ""}`}>
-        {passed ? "🏆" : "💪"}
-      </div>
+      <div className={`text-6xl bounce-in`}>{passed ? "🏆" : "💪"}</div>
       <div className="text-center">
         <div className={`text-2xl font-bold mb-1 ${passed ? "text-green-400" : "text-orange-400"}`}>
           {passed ? "太棒了！" : "继续加油！"}
         </div>
-        <div className="text-gray-400 text-sm">
-          {passed ? "已达到目标速度" : `目标：${target} WPM`}
-        </div>
+        <div className="text-gray-400 text-sm">{passed ? "流畅完成" : "多练几次会更好"}</div>
       </div>
       <div className="flex gap-6 w-full">
         <div className="flex-1 bg-white/10 rounded-2xl p-4 text-center">
@@ -28,17 +37,11 @@ function ResultCard({ wpm, accuracy, target, onNext, onRetry }) {
         </div>
       </div>
       <div className="flex gap-3 w-full">
-        <button
-          onClick={onRetry}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 text-white font-medium"
-        >
+        <button onClick={onRetry} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 text-white font-medium">
           <RotateCcw size={16} /> 再试一次
         </button>
-        <button
-          onClick={onNext}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white font-medium"
-        >
-          下一题 <ChevronRight size={16} />
+        <button onClick={onNext} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white font-medium">
+          下一句 <ChevronRight size={16} />
         </button>
       </div>
     </div>
@@ -46,7 +49,7 @@ function ResultCard({ wpm, accuracy, target, onNext, onRetry }) {
 }
 
 export default function Typing() {
-  const [challengeIdx, setChallengeIdx] = useState(0);
+  const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -57,7 +60,7 @@ export default function Typing() {
   const inputRef = useRef(null);
   const timerRef = useRef(null);
 
-  const challenge = typingChallenges[challengeIdx];
+  const challenge = challenges[idx % challenges.length];
 
   const reset = useCallback(() => {
     setInput("");
@@ -67,16 +70,14 @@ export default function Typing() {
     setWpm(0);
     setAccuracy(100);
     setElapsed(0);
-    if (timerRef.current) clearInterval(timerRef.current);
+    clearInterval(timerRef.current);
   }, []);
 
-  useEffect(() => { reset(); }, [challengeIdx, reset]);
+  useEffect(() => { reset(); }, [idx, reset]);
 
   useEffect(() => {
     if (started && !finished) {
-      timerRef.current = setInterval(() => {
-        setElapsed(e => e + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
     }
     return () => clearInterval(timerRef.current);
   }, [started, finished]);
@@ -87,180 +88,124 @@ export default function Typing() {
       setStarted(true);
       setStartTime(Date.now());
     }
+    if (val.length > challenge.text.length) return;
+    setInput(val);
 
-    if (val.length <= challenge.text.length) {
-      setInput(val);
-    }
-
-    // Calculate accuracy
     let correct = 0;
     for (let i = 0; i < val.length; i++) {
       if (val[i] === challenge.text[i]) correct++;
     }
-    const acc = val.length > 0 ? Math.round((correct / val.length) * 100) : 100;
-    setAccuracy(acc);
+    setAccuracy(val.length > 0 ? Math.round((correct / val.length) * 100) : 100);
 
-    // Check if finished
     if (val === challenge.text) {
       clearInterval(timerRef.current);
       setFinished(true);
-      const duration = (Date.now() - startTime) / 1000 / 60;
-      const words = challenge.text.split(" ").length;
-      setWpm(Math.round(words / duration));
-    }
-
-    // Live WPM
-    if (started && startTime) {
-      const duration = (Date.now() - startTime) / 1000 / 60;
-      if (duration > 0) {
-        const words = val.split(" ").length;
-        setWpm(Math.round(words / duration));
-      }
+      const mins = (Date.now() - startTime) / 1000 / 60;
+      setWpm(Math.round(challenge.text.split(" ").length / mins));
+    } else if (started && startTime) {
+      const mins = (Date.now() - startTime) / 1000 / 60;
+      if (mins > 0) setWpm(Math.round(val.split(" ").length / mins));
     }
   };
 
-  const levelColor = { "初级": "text-green-400 bg-green-400/20", "中级": "text-yellow-400 bg-yellow-400/20", "高级": "text-red-400 bg-red-400/20" };
-
-  const renderText = () => {
-    return challenge.text.split("").map((char, i) => {
+  const renderText = () =>
+    challenge.text.split("").map((char, i) => {
       let cls = "text-gray-500";
-      if (i < input.length) {
-        cls = input[i] === char ? "text-white" : "text-red-400 bg-red-400/20";
-      } else if (i === input.length) {
-        cls = "text-white border-b-2 border-blue-400 typing-cursor";
-      }
-      return (
-        <span key={i} className={cls}>
-          {char}
-        </span>
-      );
+      if (i < input.length) cls = input[i] === char ? "text-white" : "text-red-400 bg-red-400/20 rounded";
+      else if (i === input.length) cls = "text-white border-b-2 border-blue-400 typing-cursor";
+      return <span key={i} className={cls}>{char}</span>;
     });
-  };
-
-  const nextChallenge = () => {
-    setChallengeIdx(i => (i + 1) % typingChallenges.length);
-  };
 
   return (
-    <div className="h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-6 pb-4">
-        <h2 className="text-2xl font-bold">打字练习</h2>
-        <p className="text-gray-400 text-sm mt-1">提升打字速度，强化肌肉记忆</p>
+    <div className="py-4 flex flex-col gap-4">
+      <div className="pt-2">
+        <h2 className="text-xl font-bold">打字练习</h2>
+        <p className="text-gray-500 text-sm mt-0.5">练习学过的对话句子，强化记忆</p>
       </div>
 
-      {/* Challenge selector */}
-      <div className="flex gap-3 px-5 pb-4 overflow-x-auto no-scrollbar">
-        {typingChallenges.map((c, i) => (
-          <button
-            key={c.id}
-            onClick={() => setChallengeIdx(i)}
-            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              i === challengeIdx
-                ? "bg-blue-600 text-white"
-                : "bg-white/10 text-gray-400"
-            }`}
-          >
-            第 {i + 1} 题
-          </button>
-        ))}
+      {/* Scene context */}
+      <div className="rounded-2xl border border-white/10 p-4" style={{ background: "#111" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-gray-500">场景：</span>
+          <span className="text-xs font-medium" style={{ color: challenge.accent }}>{challenge.scene}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded ml-auto" style={{ background: challenge.accent + "20", color: challenge.accent }}>
+            角色 {challenge.role}
+          </span>
+        </div>
+        <div className="text-gray-400 text-sm">{challenge.zh}</div>
       </div>
 
-      {/* Stats bar */}
-      <div className="flex gap-3 px-5 mb-5">
-        <div className="flex-1 bg-white/5 rounded-xl p-3 flex items-center gap-2">
-          <Zap size={16} className="text-yellow-400" />
+      {/* Stats */}
+      <div className="flex gap-3">
+        <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#111" }}>
+          <Zap size={15} className="text-yellow-400" />
           <div>
-            <div className="text-lg font-bold">{wpm}</div>
+            <div className="text-base font-bold">{wpm}</div>
             <div className="text-xs text-gray-500">WPM</div>
           </div>
         </div>
-        <div className="flex-1 bg-white/5 rounded-xl p-3 flex items-center gap-2">
-          <Target size={16} className="text-green-400" />
+        <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#111" }}>
+          <Target size={15} className="text-green-400" />
           <div>
-            <div className="text-lg font-bold">{accuracy}%</div>
+            <div className="text-base font-bold">{accuracy}%</div>
             <div className="text-xs text-gray-500">准确率</div>
           </div>
         </div>
-        <div className="flex-1 bg-white/5 rounded-xl p-3 flex items-center gap-2">
-          <Trophy size={16} className="text-blue-400" />
+        <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#111" }}>
+          <Trophy size={15} className="text-blue-400" />
           <div>
-            <div className="text-lg font-bold">{challenge.wpm_target}</div>
-            <div className="text-xs text-gray-500">目标</div>
+            <div className="text-base font-bold">{elapsed}s</div>
+            <div className="text-xs text-gray-500">用时</div>
           </div>
         </div>
       </div>
 
       {finished ? (
-        <div className="px-5">
-          <ResultCard
-            wpm={wpm}
-            accuracy={accuracy}
-            target={challenge.wpm_target}
-            onNext={nextChallenge}
-            onRetry={reset}
-          />
+        <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "#111" }}>
+          <ResultCard wpm={wpm} accuracy={accuracy} onNext={() => setIdx(i => i + 1)} onRetry={reset} />
         </div>
       ) : (
-        <div className="px-5 flex flex-col gap-4">
-          {/* Level + Translation */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${levelColor[challenge.level]}`}>
-              {challenge.level}
-            </span>
-            <span className="text-xs text-gray-500">{challenge.zh}</span>
-          </div>
-
-          {/* Text display */}
+        <>
+          {/* Text to type */}
           <div
-            className="bg-white/5 rounded-2xl p-4 text-lg leading-relaxed font-mono cursor-text border border-white/10"
+            className="rounded-2xl p-4 text-lg leading-relaxed font-mono cursor-text border border-white/10"
+            style={{ background: "#111" }}
             onClick={() => inputRef.current?.focus()}
           >
             {renderText()}
           </div>
 
-          {/* Progress bar */}
-          <div className="w-full bg-white/10 rounded-full h-1.5">
+          {/* Progress */}
+          <div className="w-full bg-white/10 rounded-full h-1">
             <div
-              className="bg-blue-500 h-1.5 rounded-full transition-all"
-              style={{ width: `${(input.length / challenge.text.length) * 100}%` }}
+              className="h-1 rounded-full transition-all"
+              style={{ width: `${(input.length / challenge.text.length) * 100}%`, background: challenge.accent }}
             />
           </div>
 
-          {/* Input area */}
-          <div className="relative">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={handleInput}
-              placeholder={started ? "" : "点击此处开始打字..."}
-              className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-gray-500 outline-none focus:border-blue-500 transition-colors text-base"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-            />
-            {input.length > 0 && (
-              <button
-                onClick={reset}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-              >
-                <RotateCcw size={16} />
-              </button>
-            )}
+          {/* Input */}
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={handleInput}
+            placeholder="点击此处开始打字..."
+            className="w-full border border-white/15 rounded-2xl px-4 py-4 text-white placeholder-gray-600 outline-none focus:border-blue-500 transition-colors text-base"
+            style={{ background: "#111" }}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+          />
+
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => setIdx(i => i + 1)}
+              className="text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              跳过这句 →
+            </button>
           </div>
-
-          {!started && (
-            <div className="text-center text-sm text-gray-500 mt-2">
-              双击屏幕或点击输入框开始 ⌨️
-            </div>
-          )}
-
-          {started && (
-            <div className="text-center text-sm text-gray-400">
-              ⏱ 已用时 {elapsed}s · 已输入 {input.length}/{challenge.text.length} 字符
-            </div>
-          )}
-        </div>
+        </>
       )}
     </div>
   );
