@@ -2,16 +2,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { RotateCcw, Trophy, Zap, Target, ChevronRight } from "lucide-react";
 import { posts } from "../data/content";
 
-// Extract all dialogue lines from posts as typing challenges
+// Extract subtitle lines as typing challenges (matches content.js structure)
 const challenges = posts.flatMap(post =>
-  post.content.en.map((line, i) => ({
+  post.subtitles.map((sub, i) => ({
     id: `${post.id}-${i}`,
-    text: line.text,
-    zh: post.content.zh[i].text,
-    scene: post.user.name,
-    role: line.role,
-    accent: post.accent,
-    tags: post.tags,
+    text: sub.en,
+    zh: sub.zh,
+    scene: post.show,
+    episode: post.episode,
+    sceneDesc: post.scene,
   }))
 );
 
@@ -127,9 +126,9 @@ export default function Typing() {
       <div className="rounded-2xl border border-white/10 p-4" style={{ background: "#111" }}>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs text-gray-500">场景：</span>
-          <span className="text-xs font-medium" style={{ color: challenge.accent }}>{challenge.scene}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded ml-auto" style={{ background: challenge.accent + "20", color: challenge.accent }}>
-            角色 {challenge.role}
+          <span className="text-xs font-medium text-blue-400">{challenge.scene}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded ml-auto text-gray-400" style={{ background: "rgba(255,255,255,0.08)" }}>
+            {challenge.episode}
           </span>
         </div>
         <div className="text-gray-400 text-sm">{challenge.zh}</div>
@@ -179,7 +178,7 @@ export default function Typing() {
           <div className="w-full bg-white/10 rounded-full h-1">
             <div
               className="h-1 rounded-full transition-all"
-              style={{ width: `${(input.length / challenge.text.length) * 100}%`, background: challenge.accent }}
+              style={{ width: `${(input.length / challenge.text.length) * 100}%`, background: "#3b82f6" }}
             />
           </div>
 
