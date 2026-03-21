@@ -15,7 +15,7 @@ const GRADIENTS = [
   "linear-gradient(160deg, #0a0a0a, #1a1a1a, #2d1b69)",
 ];
 
-export default function VideoCard({ post, isActive, cardIndex }) {
+export default function VideoCard({ post, isActive, cardIndex, vh }) {
   const videoRef = useRef(null);
   const [currentSub, setCurrentSub] = useState(null);
   const [videoState, setVideoState] = useState("loading"); // loading | playing | paused | error
