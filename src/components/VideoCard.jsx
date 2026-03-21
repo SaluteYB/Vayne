@@ -1,340 +1,203 @@
-import { useState, useRef, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, Volume2, VolumeX, Play } from "lucide-react";
+import { useState } from "react";
+import { Heart, MessageCircle, Share2, Bookmark, ChevronRight } from "lucide-react";
 
-const fmt = (n) => n >= 10000 ? (n / 10000).toFixed(1) + "w" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : n;
+const fmt = (n) =>
+  n >= 10000 ? (n / 10000).toFixed(1) + "w" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : n;
 
-// Gradient backgrounds as visual fallback (shows while video loads or on error)
-const GRADIENTS = [
-  "linear-gradient(160deg, #0f2027, #203a43, #2c5364)",
-  "linear-gradient(160deg, #1a0533, #2d1b69, #11998e)",
-  "linear-gradient(160deg, #0d0d0d, #1a1a2e, #16213e)",
-  "linear-gradient(160deg, #200122, #6f0000, #200122)",
-  "linear-gradient(160deg, #0f0c29, #302b63, #24243e)",
-  "linear-gradient(160deg, #000428, #004e92)",
-  "linear-gradient(160deg, #1f1c2c, #928dab)",
-  "linear-gradient(160deg, #0a0a0a, #1a1a1a, #2d1b69)",
+// Apple / Tesla — obsidian dark, each card a mood
+const THEMES = [
+  { bg: "radial-gradient(ellipse at 22% 28%, #1b2d4f 0%, #070d1c 100%)", accent: "#4d8eff" },
+  { bg: "radial-gradient(ellipse at 78% 72%, #28142e 0%, #0a0509 100%)", accent: "#bf8aff" },
+  { bg: "radial-gradient(ellipse at 38% 22%, #0b1f14 0%, #040908 100%)", accent: "#3ecf8e" },
+  { bg: "radial-gradient(ellipse at 64% 78%, #221710 0%, #0d0905 100%)", accent: "#d4924a" },
+  { bg: "radial-gradient(ellipse at 18% 62%, #14101d 0%, #08040e 100%)", accent: "#a88beb" },
+  { bg: "linear-gradient(145deg, #0d1117 0%, #161d2c 45%, #0d1117 100%)", accent: "#58a6ff" },
+  { bg: "radial-gradient(ellipse at 50% 50%, #161616 0%, #080808 100%)", accent: "#e0e0e0" },
+  { bg: "radial-gradient(ellipse at 30% 68%, #1c1608 0%, #0c0a04 100%)", accent: "#c9a84c" },
 ];
 
-export default function VideoCard({ post, isActive, cardIndex, vh }) {
-  const videoRef = useRef(null);
-  const [currentSub, setCurrentSub] = useState(null);
-  const [videoState, setVideoState] = useState("loading"); // loading | playing | paused | error
-  const [muted, setMuted] = useState(true);
+export default function VideoCard({ post, isActive, cardIndex }) {
+  const [subIdx, setSubIdx] = useState(0);
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [likes, setLikes] = useState(post.likes);
-  const [progress, setProgress] = useState(0);
-  const [showVocab, setShowVocab] = useState(false);
-  const lastTap = useRef(0);
+  const [vocabOpen, setVocabOpen] = useState(false);
 
-  const gradient = GRADIENTS[cardIndex % GRADIENTS.length];
+  const { bg, accent } = THEMES[cardIndex % THEMES.length];
+  const sub = post.subtitles[subIdx];
+  const total = post.subtitles.length;
 
-  // Auto play/pause
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isActive) {
-      video.currentTime = 0;
-      const p = video.play();
-      if (p !== undefined) {
-        p.then(() => setVideoState("playing")).catch(() => setVideoState("error"));
-      }
-    } else {
-      video.pause();
-      video.currentTime = 0;
-      setVideoState("loading");
-      setCurrentSub(null);
-      setProgress(0);
-    }
-  }, [isActive]);
+  // Reset on slide-away
+  if (!isActive && subIdx !== 0) setSubIdx(0);
 
-  const handleTimeUpdate = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    const t = video.currentTime;
-    const dur = video.duration || 1;
-    setProgress((t / dur) * 100);
-    const sub = post.subtitles.find(s => t >= s.start && t < s.end);
-    setCurrentSub(sub || null);
-  };
-
-  const handleCanPlay = () => {
-    if (isActive && videoRef.current) {
-      videoRef.current.play()
-        .then(() => setVideoState("playing"))
-        .catch(() => setVideoState("error"));
-    }
-  };
-
-  const handleError = () => setVideoState("error");
-
-  const handleTap = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 280) {
-      if (!liked) { setLiked(true); setLikes(l => l + 1); }
-    } else {
-      const video = videoRef.current;
-      if (!video || videoState === "error") return;
-      if (video.paused) { video.play(); setVideoState("playing"); }
-      else { video.pause(); setVideoState("paused"); }
-    }
-    lastTap.current = now;
-  };
-
-  const toggleMute = (e) => {
-    e.stopPropagation();
-    const video = videoRef.current;
-    if (video) video.muted = !muted;
-    setMuted(m => !m);
-  };
+  const handleTap = () => setSubIdx(i => (i + 1) % total);
 
   return (
     <div
-      style={{
-        height: "100%",
-        position: "relative",
-        background: gradient,
-        overflow: "hidden",
-        userSelect: "none",
-      }}
+      style={{ height: "100%", position: "relative", background: bg, overflow: "hidden", userSelect: "none" }}
       onClick={handleTap}
     >
-      {/* Video */}
-      <video
-        ref={videoRef}
-        src={post.videoUrl}
-        style={{
-          position: "absolute", inset: 0,
-          width: "100%", height: "100%",
-          objectFit: "cover",
-          opacity: videoState === "playing" || videoState === "paused" ? 1 : 0,
-          transition: "opacity 0.4s",
-        }}
-        loop
-        playsInline
-        muted
-        preload="auto"
-        onCanPlay={handleCanPlay}
-        onTimeUpdate={handleTimeUpdate}
-        onError={handleError}
-        onPlay={() => setVideoState("playing")}
-        onPause={() => { if (videoState === "playing") setVideoState("paused"); }}
-      />
-
-      {/* Gradient overlay */}
+      {/* Ambient glow — top-right corner */}
       <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 35%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.5) 100%)",
+        position: "absolute", top: -120, right: -120, width: 360, height: 360,
+        borderRadius: "50%", background: accent, opacity: 0.06,
+        filter: "blur(90px)", pointerEvents: "none",
+      }} />
+      {/* Secondary glow — bottom-left */}
+      <div style={{
+        position: "absolute", bottom: -80, left: -80, width: 280, height: 280,
+        borderRadius: "50%", background: accent, opacity: 0.04,
+        filter: "blur(70px)", pointerEvents: "none",
       }} />
 
-      {/* Loading spinner */}
-      {videoState === "loading" && (
-        <div style={{
-          position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%,-50%)",
-          pointerEvents: "none",
+      {/* ── Top badge ── */}
+      <div style={{ position: "absolute", top: 58, left: 20, right: 20, zIndex: 10 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7,
+          background: "rgba(255,255,255,0.055)", backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "0.5px solid rgba(255,255,255,0.09)", borderRadius: 24,
+          padding: "5px 14px",
         }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: "50%",
-            border: "3px solid rgba(255,255,255,0.2)",
-            borderTopColor: "rgba(255,255,255,0.8)",
-            animation: "spin 0.8s linear infinite",
-          }} />
-        </div>
-      )}
-
-      {/* Pause icon */}
-      {videoState === "paused" && (
-        <div style={{
-          position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%,-50%)",
-          background: "rgba(0,0,0,0.45)", borderRadius: "50%",
-          width: 64, height: 64,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          pointerEvents: "none",
-        }}>
-          <Play size={28} color="white" fill="white" />
-        </div>
-      )}
-
-      {/* Error state — show all subtitles as static text */}
-      {videoState === "error" && (
-        <div style={{
-          position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%, -55%)",
-          width: "80%", textAlign: "center",
-          pointerEvents: "none",
-        }}>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>
-            视频加载中...
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {post.subtitles.map((s, i) => (
-              <div key={i}>
-                <div style={{ fontSize: 16, color: "#fff", fontWeight: 600, lineHeight: 1.4 }}>{s.en}</div>
-                <div style={{ fontSize: 13, color: "#fde68a", marginTop: 3 }}>{s.zh}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top — show info + mute */}
-      <div style={{
-        position: "absolute", top: 16, left: 16, right: 16,
-        display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-        zIndex: 10,
-      }}>
-        <div>
-          <div style={{
-            fontSize: 13, fontWeight: 700, color: "#fff",
-            textShadow: "0 1px 6px rgba(0,0,0,0.9)",
-            background: "rgba(0,0,0,0.35)",
-            display: "inline-block", padding: "3px 10px", borderRadius: 20,
-            marginBottom: 4,
-          }}>
+          <span style={{ color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase" }}>
             {post.show}
-            <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 400, marginLeft: 6 }}>
-              {post.episode}
-            </span>
-          </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", paddingLeft: 4 }}>
-            {post.scene}
-          </div>
+          </span>
+          <span style={{ width: 1, height: 10, background: "rgba(255,255,255,0.15)" }} />
+          <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: 0.5 }}>{post.episode}</span>
         </div>
-        <button
-          onClick={toggleMute}
-          style={{
-            width: 36, height: 36, borderRadius: "50%",
-            background: "rgba(0,0,0,0.4)", border: "none",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, marginLeft: 8,
-          }}
-        >
-          {muted ? <VolumeX size={16} color="white" /> : <Volume2 size={16} color="white" />}
-        </button>
+        <div style={{ marginTop: 7, paddingLeft: 2,
+          color: "rgba(255,255,255,0.28)", fontSize: 11, letterSpacing: 0.6 }}>
+          {post.scene}
+        </div>
       </div>
 
-      {/* Subtitles (only when video is playing) */}
-      {videoState === "playing" && (
+      {/* ── Main content (vertically centered) ── */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 10,
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        padding: "0 28px 80px",
+      }}>
+        {/* Progress dots */}
+        <div style={{ display: "flex", gap: 5, marginBottom: 36, alignItems: "center" }}>
+          {post.subtitles.map((_, i) => (
+            <div key={i} style={{
+              height: 2, borderRadius: 2,
+              width: i === subIdx ? 22 : 5,
+              background: i === subIdx ? accent : "rgba(255,255,255,0.14)",
+              transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
+            }} />
+          ))}
+        </div>
+
+        {/* English */}
         <div style={{
-          position: "absolute", bottom: 130, left: 16, right: 72, zIndex: 10,
-          minHeight: 56,
+          fontSize: 27, fontWeight: 600, color: "#fff", lineHeight: 1.5,
+          letterSpacing: -0.4,
+          fontFamily: '-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif',
+          marginBottom: 18,
         }}>
-          {currentSub && (
-            <div style={{
-              background: "rgba(0,0,0,0.6)",
-              borderRadius: 10, padding: "8px 14px",
-              display: "inline-block",
-            }}>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "#fff", lineHeight: 1.4, marginBottom: 4 }}>
-                {currentSub.en}
-              </div>
-              <div style={{ fontSize: 13, color: "#fde68a", lineHeight: 1.4 }}>
-                {currentSub.zh}
-              </div>
-            </div>
-          )}
+          &ldquo;{sub.en}&rdquo;
         </div>
-      )}
 
-      {/* Vocabulary */}
-      {post.vocabulary?.length > 0 && (
-        <div style={{ position: "absolute", bottom: 80, left: 16, right: 72, zIndex: 10 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowVocab(v => !v); }}
-            style={{
-              fontSize: 11, color: "#a5f3fc",
-              background: "rgba(0,0,0,0.45)",
-              border: "1px solid rgba(165,243,252,0.35)",
-              borderRadius: 20, padding: "5px 12px",
-              cursor: "pointer",
-            }}
-          >
-            📖 {showVocab ? "收起" : `${post.vocabulary.length} 个重点词`}
-          </button>
-          {showVocab && (
-            <div
-              style={{
-                marginTop: 8, background: "rgba(0,0,0,0.75)",
-                borderRadius: 12, padding: "10px 14px",
-                display: "flex", flexDirection: "column", gap: 8,
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              {post.vocabulary.map((v, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                  <span style={{ color: "#a5f3fc", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{v.word}</span>
-                  <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>{v.meaning}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Progress bar */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 2,
-        background: "rgba(255,255,255,0.15)", zIndex: 10,
-      }}>
+        {/* Chinese */}
         <div style={{
-          height: "100%", background: "rgba(255,255,255,0.8)",
-          width: `${progress}%`, transition: "width 0.15s linear",
-        }} />
+          fontSize: 15, color: "rgba(255,255,255,0.42)", lineHeight: 1.7,
+          letterSpacing: 0.6, fontWeight: 400,
+        }}>
+          {sub.zh}
+        </div>
+
+        {/* Tap hint */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 3, marginTop: 30,
+          color: "rgba(255,255,255,0.16)", fontSize: 11, letterSpacing: 0.6,
+        }}>
+          <ChevronRight size={11} strokeWidth={1.5} />
+          <span>点击下一句 {subIdx + 1} / {total}</span>
+        </div>
       </div>
 
-      {/* Right action buttons */}
+      {/* ── Bottom area ── */}
       <div style={{
-        position: "absolute", right: 12, bottom: 100, zIndex: 10,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
+        position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10,
+        paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
       }}>
-        <ActionBtn
-          icon={<Heart size={26} fill={liked ? "#f43f5e" : "none"} color={liked ? "#f43f5e" : "white"} />}
-          label={fmt(likes)}
-          onClick={(e) => { e.stopPropagation(); setLiked(l => !l); setLikes(n => liked ? n - 1 : n + 1); }}
-        />
-        <ActionBtn
-          icon={<MessageCircle size={26} color="white" />}
-          label={fmt(post.comments)}
-          onClick={e => e.stopPropagation()}
-        />
-        <ActionBtn
-          icon={<Share2 size={26} color="white" />}
-          label="分享"
-          onClick={e => e.stopPropagation()}
-        />
-        <ActionBtn
-          icon={<Bookmark size={26} fill={bookmarked ? "white" : "none"} color="white" />}
-          label={bookmarked ? "已存" : "存"}
-          onClick={(e) => { e.stopPropagation(); setBookmarked(b => !b); }}
-        />
-      </div>
+        {/* Hairline */}
+        <div style={{ height: "0.5px", background: "rgba(255,255,255,0.07)", marginBottom: 14 }} />
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+        <div style={{ display: "flex", alignItems: "flex-end", padding: "0 20px" }}>
+          {/* Vocab */}
+          <div style={{ flex: 1 }}>
+            {post.vocabulary?.length > 0 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setVocabOpen(v => !v); }}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", letterSpacing: 0.8 }}>词汇</span>
+                  <span style={{
+                    background: accent + "22", color: accent,
+                    fontSize: 10, fontWeight: 700, borderRadius: 8,
+                    padding: "1px 6px", letterSpacing: 0.5,
+                  }}>{post.vocabulary.length}</span>
+                </button>
+                {vocabOpen && (
+                  <div
+                    style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 7 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {post.vocabulary.map((v, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                        <span style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>{v.word}</span>
+                        <span style={{ height: "0.5px", flex: 1, background: "rgba(255,255,255,0.08)" }} />
+                        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{v.meaning}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", alignItems: "center", gap: 22, paddingLeft: 16 }}>
+            <Btn
+              icon={<Heart size={21} fill={liked ? "#ff3b5c" : "none"} color={liked ? "#ff3b5c" : "rgba(255,255,255,0.6)"} strokeWidth={1.5} />}
+              label={fmt(likes)}
+              onClick={(e) => { e.stopPropagation(); setLiked(l => !l); setLikes(n => liked ? n - 1 : n + 1); }}
+            />
+            <Btn
+              icon={<MessageCircle size={21} color="rgba(255,255,255,0.6)" strokeWidth={1.5} />}
+              label={fmt(post.comments)}
+              onClick={e => e.stopPropagation()}
+            />
+            <Btn
+              icon={<Share2 size={21} color="rgba(255,255,255,0.6)" strokeWidth={1.5} />}
+              label="分享"
+              onClick={e => e.stopPropagation()}
+            />
+            <Btn
+              icon={<Bookmark size={21} fill={saved ? "rgba(255,255,255,0.9)" : "none"} color="rgba(255,255,255,0.6)" strokeWidth={1.5} />}
+              label={saved ? "已存" : "存"}
+              onClick={(e) => { e.stopPropagation(); setSaved(s => !s); }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function ActionBtn({ icon, label, onClick }) {
+function Btn({ icon, label, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-        background: "none", border: "none", cursor: "pointer", padding: 0,
-      }}
-    >
-      <div style={{
-        width: 46, height: 46, borderRadius: "50%",
-        background: "rgba(0,0,0,0.35)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        {icon}
-      </div>
-      <span style={{ fontSize: 11, color: "white", fontWeight: 500 }}>{label}</span>
+    <button onClick={onClick} style={{
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+      background: "none", border: "none", cursor: "pointer", padding: 0,
+    }}>
+      {icon}
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.32)", letterSpacing: 0.3 }}>{label}</span>
     </button>
   );
 }
