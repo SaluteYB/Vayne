@@ -14,54 +14,44 @@ const tabs = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("feed");
-
   const isFeed = activeTab === "feed";
 
   return (
+    // Full-screen fixed container — avoids ALL height inheritance issues on iOS
     <div style={{
-      display: "flex",
-      flexDirection: "column",
-      height: "100dvh",
+      position: "fixed",
+      inset: 0,
       background: isFeed ? "#000" : "#0a0a0a",
       color: "#f1f5f9",
+      display: "flex",
+      flexDirection: "column",
     }}>
-      {/* Top header */}
-      <header style={{
-        flexShrink: 0,
-        paddingTop: "env(safe-area-inset-top)",
-        background: isFeed ? "transparent" : "rgba(10,10,10,0.95)",
-        backdropFilter: "blur(12px)",
-        borderBottom: isFeed ? "none" : "1px solid rgba(255,255,255,0.08)",
+
+      {/* Header — overlaid (transparent) on feed, solid on other tabs */}
+      <div style={{
         position: isFeed ? "absolute" : "relative",
         top: 0, left: 0, right: 0,
         zIndex: 50,
+        paddingTop: "env(safe-area-inset-top)",
+        background: isFeed ? "transparent" : "rgba(10,10,10,0.95)",
+        backdropFilter: isFeed ? "none" : "blur(12px)",
+        borderBottom: isFeed ? "none" : "1px solid rgba(255,255,255,0.08)",
+        flexShrink: 0,
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
           <div style={{ display: "flex", alignItems: "center", height: 50 }}>
-            <span style={{ fontWeight: 700, fontSize: 17, color: isFeed ? "white" : "#f1f5f9" }}>
-              英语打卡
-            </span>
+            <span style={{ fontWeight: 700, fontSize: 17, color: "#fff" }}>英语打卡</span>
             <nav style={{ display: "flex", marginLeft: "auto", gap: 2 }}>
               {tabs.map(({ id, label }) => {
                 const active = activeTab === id;
                 return (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: active
-                        ? isFeed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"
-                        : "none",
-                      color: active ? "#f1f5f9" : isFeed ? "rgba(255,255,255,0.6)" : "#6b7280",
-                      fontWeight: active ? 600 : 400,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
+                  <button key={id} onClick={() => setActiveTab(id)} style={{
+                    padding: "6px 12px", borderRadius: 8, border: "none",
+                    background: active ? "rgba(255,255,255,0.15)" : "none",
+                    color: active ? "#fff" : "rgba(255,255,255,0.45)",
+                    fontWeight: active ? 600 : 400, fontSize: 14,
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}>
                     {label}
                   </button>
                 );
@@ -69,25 +59,26 @@ export default function App() {
             </nav>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Content */}
-      <main style={{
-        flex: 1,
-        overflow: "hidden",
-        minHeight: 0,
-        // For non-feed pages, add top padding so content isn't under the header
-        ...(isFeed ? {} : { paddingTop: 0 }),
-      }}>
-        {activeTab === "feed" && <Feed />}
-        {activeTab !== "feed" && (
-          <div style={{ height: "100%", overflowY: "auto", maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
+      {/* Content area */}
+      {isFeed ? (
+        // Feed is absolute and covers the whole screen
+        <Feed />
+      ) : (
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 0,
+          WebkitOverflowScrolling: "touch",
+        }}>
+          <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px" }}>
             {activeTab === "typing" && <Typing />}
             {activeTab === "checkin" && <CheckIn />}
             {activeTab === "profile" && <Profile />}
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,17 +18,22 @@ export default function Feed() {
       ref={containerRef}
       onScroll={handleScroll}
       style={{
-        height: "100%",
+        position: "absolute",
+        inset: 0,
         overflowY: "scroll",
         scrollSnapType: "y mandatory",
         WebkitOverflowScrolling: "touch",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
       }}
     >
       {posts.map((post, i) => (
         <div
           key={post.id}
           style={{
-            height: "100%",
+            /* Each card fills the viewport exactly */
+            height: "100vh",
+            height: "100svh",
             scrollSnapAlign: "start",
             scrollSnapStop: "always",
             overflow: "hidden",
