@@ -59,7 +59,8 @@ export default function App() {
       {/* Bottom nav */}
       <nav style={{
         flexShrink: 0,
-        height: 60,
+        height: "calc(60px + env(safe-area-inset-bottom))",
+        paddingBottom: "env(safe-area-inset-bottom)",
         background: "rgba(0,0,0,0.9)",
         backdropFilter: "blur(20px)",
         borderTop: "1px solid rgba(255,255,255,0.1)",
