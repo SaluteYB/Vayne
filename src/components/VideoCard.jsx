@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, Volume2, Square } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Volume2, Square, ChevronRight } from "lucide-react";
 
 function useTTS() {
   const [speaking, setSpeaking] = useState(false);
@@ -15,10 +15,7 @@ function useTTS() {
     uttRef.current = utt;
     window.speechSynthesis.speak(utt);
   }, []);
-  const stop = useCallback(() => {
-    window.speechSynthesis?.cancel();
-    setSpeaking(false);
-  }, []);
+  const stop = useCallback(() => { window.speechSynthesis?.cancel(); setSpeaking(false); }, []);
   return { speaking, speak, stop };
 }
 
@@ -26,14 +23,46 @@ const fmt = (n) =>
   n >= 10000 ? (n / 10000).toFixed(1) + "w" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : n;
 
 const THEMES = [
-  { bg: "linear-gradient(155deg,#0d1f42 0%,#060e22 55%,#020510 100%)", glow:"#1a4fd6", accent:"#4d8eff" },
-  { bg: "linear-gradient(155deg,#1c0b30 0%,#0c0418 55%,#040108 100%)", glow:"#7c3aed", accent:"#bf8aff" },
-  { bg: "linear-gradient(155deg,#091a0e 0%,#040c06 55%,#020402 100%)", glow:"#059669", accent:"#3ecf8e" },
-  { bg: "linear-gradient(155deg,#1e0f06 0%,#0d0703 55%,#050300 100%)", glow:"#b45309", accent:"#f59e0b" },
-  { bg: "linear-gradient(155deg,#160a26 0%,#0b0514 55%,#040208 100%)", glow:"#7e22ce", accent:"#c084fc" },
-  { bg: "linear-gradient(155deg,#091320 0%,#050c17 55%,#020509 100%)", glow:"#0369a1", accent:"#38bdf8" },
-  { bg: "linear-gradient(155deg,#191919 0%,#0d0d0d 55%,#050505 100%)", glow:"#525252", accent:"#d4d4d4" },
-  { bg: "linear-gradient(155deg,#1a1305 0%,#0d0a02 55%,#060401 100%)", glow:"#92400e", accent:"#fbbf24" },
+  {
+    bg: "linear-gradient(160deg,#08152e 0%,#0c1d3d 40%,#060e1f 100%)",
+    card: "rgba(30,60,120,0.18)", accent: "#4d8eff", dim: "#0d2050",
+    tag: "#1a3a7a", num: "01",
+  },
+  {
+    bg: "linear-gradient(160deg,#160825 0%,#1e0c35 40%,#0a0414 100%)",
+    card: "rgba(120,40,200,0.14)", accent: "#bf8aff", dim: "#3d1280",
+    tag: "#3a1060", num: "02",
+  },
+  {
+    bg: "linear-gradient(160deg,#051610 0%,#081f14 40%,#030a06 100%)",
+    card: "rgba(20,130,80,0.14)", accent: "#3ecf8e", dim: "#0a5030",
+    tag: "#0c3d22", num: "03",
+  },
+  {
+    bg: "linear-gradient(160deg,#1a0c04 0%,#261205 40%,#0e0602 100%)",
+    card: "rgba(180,100,20,0.14)", accent: "#f59e0b", dim: "#7a3d05",
+    tag: "#5a2e04", num: "04",
+  },
+  {
+    bg: "linear-gradient(160deg,#120820 0%,#1a0c2e 40%,#080415 100%)",
+    card: "rgba(150,60,220,0.12)", accent: "#c084fc", dim: "#5a1e90",
+    tag: "#3a1060", num: "05",
+  },
+  {
+    bg: "linear-gradient(160deg,#041220 0%,#061828 40%,#020810 100%)",
+    card: "rgba(10,100,180,0.16)", accent: "#38bdf8", dim: "#064580",
+    tag: "#073858", num: "06",
+  },
+  {
+    bg: "linear-gradient(160deg,#141414 0%,#1c1c1c 40%,#0a0a0a 100%)",
+    card: "rgba(200,200,200,0.08)", accent: "#e2e2e2", dim: "#3a3a3a",
+    tag: "#2a2a2a", num: "07",
+  },
+  {
+    bg: "linear-gradient(160deg,#160f02 0%,#1e1503 40%,#0c0901 100%)",
+    card: "rgba(180,130,10,0.14)", accent: "#fbbf24", dim: "#7a5005",
+    tag: "#503404", num: "08",
+  },
 ];
 
 export default function VideoCard({ post, isActive, cardIndex }) {
@@ -41,250 +70,255 @@ export default function VideoCard({ post, isActive, cardIndex }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [likes, setLikes] = useState(post.likes);
-  const [vocabOpen, setVocabOpen] = useState(false);
   const { speaking, speak, stop } = useTTS();
-  const { bg, glow, accent } = THEMES[cardIndex % THEMES.length];
+  const theme = THEMES[cardIndex % THEMES.length];
+  const { bg, card, accent, dim, tag, num } = theme;
   const sub = post.subtitles[subIdx];
   const total = post.subtitles.length;
+  const hasVocab = post.vocabulary?.length > 0;
 
   useEffect(() => {
-    if (!isActive) { stop(); setSubIdx(0); setVocabOpen(false); }
+    if (!isActive) { stop(); setSubIdx(0); }
   }, [isActive, stop]);
   useEffect(() => { stop(); }, [subIdx, stop]);
 
-  const handleTap = () => setSubIdx(i => (i + 1) % total);
-  const handleSpeak = (e) => { e.stopPropagation(); speaking ? stop() : speak(sub.en); };
-
   return (
-    <div
-      onClick={handleTap}
-      style={{ height: "100%", position: "relative", background: bg, overflow: "hidden", userSelect: "none" }}
-    >
-      {/* Background glow blob */}
+    <div style={{
+      height: "100%", display: "flex", flexDirection: "column",
+      background: bg, overflow: "hidden", userSelect: "none", position: "relative",
+    }}>
+      {/* ── Decorative large number watermark ── */}
       <div style={{
-        position: "absolute", top: "15%", left: "50%", transform: "translateX(-50%)",
-        width: "75vw", height: "75vw", borderRadius: "50%",
-        background: glow, opacity: 0.14, filter: "blur(90px)", pointerEvents: "none",
+        position: "absolute", right: -10, top: "18%",
+        fontSize: 200, fontWeight: 900, color: accent, opacity: 0.04,
+        lineHeight: 1, pointerEvents: "none", userSelect: "none",
+        fontFamily: '"SF Pro Display",-apple-system,sans-serif', letterSpacing: -10,
+      }}>{num}</div>
+
+      {/* ── Glow blobs ── */}
+      <div style={{
+        position: "absolute", top: "10%", left: "30%",
+        width: "60vw", height: "60vw", borderRadius: "50%",
+        background: accent, opacity: 0.1, filter: "blur(80px)", pointerEvents: "none",
       }} />
-      {/* Bottom glow */}
       <div style={{
-        position: "absolute", bottom: "-10%", right: "-10%",
-        width: "50vw", height: "50vw", borderRadius: "50%",
-        background: glow, opacity: 0.07, filter: "blur(60px)", pointerEvents: "none",
+        position: "absolute", bottom: "15%", right: "-5%",
+        width: "40vw", height: "40vw", borderRadius: "50%",
+        background: dim, opacity: 0.4, filter: "blur(50px)", pointerEvents: "none",
       }} />
 
-      {/* Giant decorative quote */}
-      <div style={{
-        position: "absolute", top: "22%", left: 14, fontSize: 260,
-        lineHeight: 0.8, color: accent, opacity: 0.035,
-        fontFamily: "Georgia,serif", fontWeight: 900,
-        pointerEvents: "none", userSelect: "none",
-      }}>"</div>
-
-      {/* ── TOP HEADER ── */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 20,
-        paddingTop: "calc(env(safe-area-inset-top) + 56px)",
-        padding: "calc(env(safe-area-inset-top) + 58px) 18px 0",
-      }}>
-        {/* Segmented progress bar */}
-        <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
-          {post.subtitles.map((_, i) => (
-            <div key={i} style={{
-              flex: 1, height: 2.5, borderRadius: 2,
-              background: i <= subIdx ? accent : "rgba(255,255,255,0.12)",
-              opacity: i < subIdx ? 0.45 : 1,
-              transition: "background 0.25s, opacity 0.25s",
-            }} />
-          ))}
-        </div>
-
-        {/* Show label + scene */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{
-            background: accent, borderRadius: 5, padding: "2px 9px",
-            fontSize: 10, fontWeight: 800, color: "#000", letterSpacing: 1.2,
-            textTransform: "uppercase",
-          }}>{post.show}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{post.episode}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)" }}>·</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", flex: 1, minWidth: 0,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{post.scene}</span>
-        </div>
-      </div>
-
-      {/* ── CENTER: Dialogue card ── */}
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 10,
-        display: "flex", flexDirection: "column", justifyContent: "center",
-        padding: "0 18px 130px",
-      }}>
-        <div style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 22,
-          padding: "26px 22px 22px",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          position: "relative",
-          boxShadow: `0 0 0 1px ${accent}10, inset 0 1px 0 rgba(255,255,255,0.06)`,
-        }}>
-          {/* Accent left stripe */}
-          <div style={{
-            position: "absolute", left: 0, top: 18, bottom: 18,
-            width: 3, borderRadius: "0 3px 3px 0",
-            background: `linear-gradient(to bottom, ${accent}, ${accent}30)`,
-          }} />
-
-          {/* English */}
-          <div style={{
-            fontSize: 23, fontWeight: 700, color: "#fff",
-            lineHeight: 1.55, letterSpacing: -0.3,
-            fontFamily: '"SF Pro Display",-apple-system,BlinkMacSystemFont,sans-serif',
-            marginBottom: 16,
-          }}>
-            {sub.en}
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: "0.5px", background: "rgba(255,255,255,0.07)", marginBottom: 14 }} />
-
-          {/* Chinese */}
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.42)", lineHeight: 1.75, letterSpacing: 0.4 }}>
-            {sub.zh}
-          </div>
-        </div>
-
-        {/* TTS row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, paddingLeft: 2 }}
-          onClick={e => e.stopPropagation()}>
-          <button
-            onClick={handleSpeak}
-            style={{
-              width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
-              background: speaking ? accent : "rgba(255,255,255,0.07)",
-              border: `1.5px solid ${speaking ? accent : "rgba(255,255,255,0.1)"}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", transition: "all 0.2s",
-              boxShadow: speaking ? `0 0 18px ${accent}55` : "none",
-            }}
-          >
-            {speaking
-              ? <Square size={13} color="#000" strokeWidth={0} fill="#000" />
-              : <Volume2 size={16} color={accent} strokeWidth={2} />}
-          </button>
-
-          {speaking ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              {[10, 16, 12, 18, 10].map((h, i) => (
-                <div key={i} style={{
-                  width: 3, height: h, borderRadius: 2, background: accent,
-                  animation: `tts-wave 0.55s ease-in-out ${i * 0.08}s infinite alternate`,
+      {/* ═══════════════════════════════════════ */}
+      {/* UPPER ZONE — grows to fill space       */}
+      {/* ═══════════════════════════════════════ */}
+      <div
+        style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
+          paddingTop: "calc(env(safe-area-inset-top) + 58px)", zIndex: 10 }}
+        onClick={() => setSubIdx(i => (i + 1) % total)}
+      >
+        {/* ── Header ── */}
+        <div style={{ padding: "0 18px", marginBottom: 14 }}>
+          {/* Progress segments */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+            {post.subtitles.map((_, i) => (
+              <div key={i} style={{
+                flex: 1, height: 3, borderRadius: 3, overflow: "hidden",
+                background: "rgba(255,255,255,0.1)",
+              }}>
+                <div style={{
+                  height: "100%", borderRadius: 3,
+                  background: accent,
+                  width: i < subIdx ? "100%" : i === subIdx ? "100%" : "0%",
+                  opacity: i < subIdx ? 0.4 : 1,
+                  transition: "width 0.3s",
                 }} />
-              ))}
-              <span style={{ fontSize: 11, color: accent, marginLeft: 6, letterSpacing: 0.4 }}>朗读中…</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Show badge row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              background: tag, border: `1px solid ${accent}40`,
+              borderRadius: 8, padding: "4px 10px",
+              display: "flex", alignItems: "center", gap: 5,
+            }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: accent }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: 0.8 }}>
+                {post.show}
+              </span>
             </div>
-          ) : (
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", letterSpacing: 0.3 }}>
-              点击朗读当前句 · 点屏幕换句
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 0.3 }}>
+              {post.episode}
             </span>
-          )}
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)" }}>·</span>
+            <span style={{
+              fontSize: 11, color: "rgba(255,255,255,0.25)",
+              flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{post.scene}</span>
+          </div>
         </div>
-      </div>
 
-      {/* ── RIGHT: Action bar ── */}
-      <div style={{
-        position: "absolute", right: 14, bottom: 110, zIndex: 30,
-        display: "flex", flexDirection: "column", gap: 18,
-      }}>
-        <RoundBtn
-          icon={<Heart size={24} fill={liked ? "#ff3b5c" : "none"} color={liked ? "#ff3b5c" : "rgba(255,255,255,0.8)"} strokeWidth={1.5} />}
-          label={fmt(likes)}
-          onClick={(e) => { e.stopPropagation(); setLiked(l => !l); setLikes(n => liked ? n - 1 : n + 1); }}
-        />
-        <RoundBtn
-          icon={<MessageCircle size={24} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />}
-          label={fmt(post.comments)}
-          onClick={e => e.stopPropagation()}
-        />
-        <RoundBtn
-          icon={<Share2 size={24} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />}
-          label="分享"
-          onClick={e => e.stopPropagation()}
-        />
-        <RoundBtn
-          icon={<Bookmark size={24} fill={saved ? "rgba(255,255,255,0.9)" : "none"} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />}
-          label={saved ? "已存" : "存"}
-          onClick={(e) => { e.stopPropagation(); setSaved(s => !s); }}
-        />
-      </div>
+        {/* ── Dialogue card ── */}
+        <div style={{ flex: 1, padding: "0 18px", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 0 }}>
+          <div style={{
+            background: card,
+            border: `1px solid ${accent}18`,
+            borderRadius: 24, padding: "24px 22px",
+            backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+            position: "relative", overflow: "hidden",
+          }}>
+            {/* Top accent bar */}
+            <div style={{
+              position: "absolute", top: 0, left: 24, right: 24, height: 2,
+              background: `linear-gradient(to right, ${accent}, ${accent}00)`,
+              borderRadius: "0 0 2px 2px",
+            }} />
 
-      {/* ── BOTTOM: Vocab chips ── */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-        paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-      }}>
-        <div style={{
-          height: 72, pointerEvents: "none",
-          background: `linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)`,
-        }} />
+            {/* Quote mark decoration */}
+            <div style={{
+              position: "absolute", top: 8, right: 16, fontSize: 80,
+              color: accent, opacity: 0.08, fontFamily: "Georgia,serif",
+              lineHeight: 1, pointerEvents: "none",
+            }}>"</div>
 
-        {post.vocabulary?.length > 0 && (
-          <div style={{ padding: "0 16px 10px" }} onClick={e => e.stopPropagation()}>
-            <button
-              onClick={(e) => { e.stopPropagation(); setVocabOpen(v => !v); }}
+            {/* English */}
+            <div style={{
+              fontSize: 22, fontWeight: 700, color: "#fff",
+              lineHeight: 1.6, letterSpacing: -0.2,
+              fontFamily: '"SF Pro Display",-apple-system,BlinkMacSystemFont,sans-serif',
+              marginBottom: 14, position: "relative",
+            }}>
+              {sub.en}
+            </div>
+
+            {/* Chinese */}
+            <div style={{
+              fontSize: 13.5, color: "rgba(255,255,255,0.38)",
+              lineHeight: 1.7, letterSpacing: 0.4,
+              paddingTop: 12, borderTop: `1px solid ${accent}15`,
+            }}>
+              {sub.zh}
+            </div>
+          </div>
+
+          {/* ── Controls row ── */}
+          <div style={{
+            display: "flex", alignItems: "center", marginTop: 16, gap: 0,
+          }} onClick={e => e.stopPropagation()}>
+            {/* TTS */}
+            <button onClick={(e) => { e.stopPropagation(); speaking ? stop() : speak(sub.en); }}
               style={{
-                display: "flex", alignItems: "center", gap: 7, marginBottom: vocabOpen ? 10 : 0,
-                background: "none", border: "none", cursor: "pointer", padding: "4px 0",
+                width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                background: speaking ? accent : "rgba(255,255,255,0.08)",
+                border: `1.5px solid ${speaking ? accent : "rgba(255,255,255,0.1)"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", transition: "all 0.2s",
+                boxShadow: speaking ? `0 0 16px ${accent}60` : "none",
               }}
             >
-              <span style={{
-                background: accent + "20", color: accent, borderRadius: 6, padding: "3px 10px",
-                fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
-              }}>
-                {vocabOpen ? "▾ 收起" : "▸ 词汇"} {post.vocabulary.length}
-              </span>
+              {speaking
+                ? <Square size={12} color="#000" fill="#000" strokeWidth={0} />
+                : <Volume2 size={15} color={accent} strokeWidth={2} />}
             </button>
-            {vocabOpen && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {post.vocabulary.map((v, i) => (
+
+            {speaking ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 3, marginLeft: 10 }}>
+                {[8, 14, 10, 18, 12].map((h, i) => (
                   <div key={i} style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: `1px solid ${accent}25`,
-                    borderRadius: 12, padding: "8px 14px",
-                    backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: accent, marginBottom: 2 }}>{v.word}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{v.meaning}</div>
-                  </div>
+                    width: 3, height: h, borderRadius: 2, background: accent,
+                    animation: `tts-wave 0.55s ease-in-out ${i * 0.09}s infinite alternate`,
+                  }} />
                 ))}
+                <span style={{ fontSize: 11, color: accent, marginLeft: 6 }}>朗读中</span>
               </div>
+            ) : (
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: 10 }}>
+                朗读 · 点屏幕下一句
+              </span>
             )}
+
+            {/* Social buttons — right side */}
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+              <SocialBtn
+                icon={<Heart size={19} fill={liked ? "#ff3b5c" : "none"} color={liked ? "#ff3b5c" : "rgba(255,255,255,0.55)"} strokeWidth={1.5} />}
+                label={fmt(likes)}
+                onClick={(e) => { e.stopPropagation(); setLiked(l => !l); setLikes(n => liked ? n - 1 : n + 1); }}
+              />
+              <SocialBtn
+                icon={<MessageCircle size={19} color="rgba(255,255,255,0.55)" strokeWidth={1.5} />}
+                label={fmt(post.comments)}
+                onClick={e => e.stopPropagation()}
+              />
+              <SocialBtn
+                icon={<Bookmark size={19} fill={saved ? "rgba(255,255,255,0.9)" : "none"} color="rgba(255,255,255,0.55)" strokeWidth={1.5} />}
+                label={saved ? "已存" : fmt(post.bookmarks)}
+                onClick={(e) => { e.stopPropagation(); setSaved(s => !s); }}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Next hint */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 4, marginTop: 10,
+            color: "rgba(255,255,255,0.14)", fontSize: 11,
+          }}>
+            <ChevronRight size={11} strokeWidth={1.5} />
+            <span>{subIdx + 1} / {total}</span>
+          </div>
+        </div>
       </div>
+
+      {/* ═══════════════════════════════════════ */}
+      {/* VOCAB ZONE — always visible, fixed     */}
+      {/* ═══════════════════════════════════════ */}
+      {hasVocab && (
+        <div style={{
+          flexShrink: 0, zIndex: 10,
+          borderTop: `1px solid ${accent}18`,
+          background: `linear-gradient(to bottom, rgba(0,0,0,0.25), rgba(0,0,0,0.45))`,
+          backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+          paddingBottom: "max(env(safe-area-inset-bottom), 14px)",
+          padding: `12px 16px max(env(safe-area-inset-bottom), 14px)`,
+        }} onClick={e => e.stopPropagation()}>
+          {/* Section label */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
+          }}>
+            <div style={{ width: 3, height: 12, borderRadius: 2, background: accent }} />
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600, letterSpacing: 1 }}>
+              重点词汇
+            </span>
+          </div>
+
+          {/* Vocab grid */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {post.vocabulary.map((v, i) => (
+              <div key={i} style={{
+                background: `${accent}12`,
+                border: `1px solid ${accent}28`,
+                borderRadius: 12, padding: "8px 14px",
+                flex: "1 1 auto", minWidth: 120,
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: accent, marginBottom: 3 }}>{v.word}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", lineHeight: 1.4 }}>{v.meaning}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function RoundBtn({ icon, label, onClick }) {
+function SocialBtn({ icon, label, onClick }) {
   return (
     <button onClick={onClick} style={{
-      display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
       background: "none", border: "none", cursor: "pointer", padding: 0,
     }}>
-      <div style={{
-        width: 50, height: 50, borderRadius: "50%",
-        background: "rgba(0,0,0,0.38)",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        border: "0.5px solid rgba(255,255,255,0.12)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-      }}>
-        {icon}
-      </div>
-      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.2 }}>{label}</span>
+      {icon}
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 0.2 }}>{label}</span>
     </button>
   );
 }
