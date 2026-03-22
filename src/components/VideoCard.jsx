@@ -1,22 +1,68 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Bookmark, Volume2, Square } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Volume2, Square, ChevronDown } from "lucide-react";
+
+// ── StreamElements TTS (Amazon Polly quality, free, no key) ──
+const SE_BASE = "https://api.streamelements.com/kappa/v2/speech";
+const VOICES = [
+  { id: "Joanna", label: "Joanna", desc: "美式 ♀" },
+  { id: "Matthew", label: "Matthew", desc: "美式 ♂" },
+  { id: "Amy",    label: "Amy",    desc: "英式 ♀" },
+  { id: "Brian",  label: "Brian",  desc: "英式 ♂" },
+];
+const VOICE_KEY = "tts_voice";
+const audioCache = new Map(); // key: `${voice}:${text}`
 
 function useTTS() {
-  const [speaking, setSpeaking] = useState(false);
-  const uttRef = useRef(null);
-  const speak = useCallback((text) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = "en-US"; utt.rate = 0.85; utt.pitch = 1;
-    utt.onstart = () => setSpeaking(true);
-    utt.onend = () => setSpeaking(false);
-    utt.onerror = () => setSpeaking(false);
-    uttRef.current = utt;
-    window.speechSynthesis.speak(utt);
+  const [speaking, setSpeaking]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [voice, setVoiceState]    = useState(() => localStorage.getItem(VOICE_KEY) || "Joanna");
+  const audioRef = useRef(null);
+
+  const setVoice = useCallback((v) => {
+    localStorage.setItem(VOICE_KEY, v);
+    setVoiceState(v);
   }, []);
-  const stop = useCallback(() => { window.speechSynthesis?.cancel(); setSpeaking(false); }, []);
-  return { speaking, speak, stop };
+
+  const stop = useCallback(() => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    setSpeaking(false); setLoading(false);
+  }, []);
+
+  const speak = useCallback(async (text) => {
+    stop();
+    const cacheKey = `${voice}:${text}`;
+    setLoading(true);
+    try {
+      let url;
+      if (audioCache.has(cacheKey)) {
+        url = audioCache.get(cacheKey);
+      } else {
+        const resp = await fetch(`${SE_BASE}?voice=${voice}&text=${encodeURIComponent(text)}`);
+        if (!resp.ok) throw new Error("TTS fetch failed");
+        const blob = await resp.blob();
+        url = URL.createObjectURL(blob);
+        audioCache.set(cacheKey, url);
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setLoading(false); setSpeaking(true);
+      audio.onended  = () => setSpeaking(false);
+      audio.onerror  = () => setSpeaking(false);
+      audio.play();
+    } catch {
+      setLoading(false);
+      // Fallback to Web Speech API
+      if (!window.speechSynthesis) return;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = "en-US"; utt.rate = 0.85;
+      utt.onstart = () => setSpeaking(true);
+      utt.onend   = () => setSpeaking(false);
+      utt.onerror = () => setSpeaking(false);
+      window.speechSynthesis.speak(utt);
+    }
+  }, [voice, stop]);
+
+  return { speaking, loading, voice, setVoice, speak, stop };
 }
 
 const fmt = (n) =>
@@ -38,7 +84,7 @@ export default function VideoCard({ post, isActive, cardIndex }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [likes, setLikes] = useState(post.likes);
-  const { speaking, speak, stop } = useTTS();
+  const { speaking, loading, voice, setVoice, speak, stop } = useTTS();
   const { bg, accent, tag } = THEMES[cardIndex % THEMES.length];
   const bgStyle = `linear-gradient(165deg, ${bg[0]} 0%, ${bg[1]} 45%, ${bg[2]} 100%)`;
 
@@ -159,16 +205,22 @@ export default function VideoCard({ post, isActive, cardIndex }) {
                 </div>
               </div>
 
-              {/* Waveform when this line is speaking */}
-              {isActive && speaking && (
+              {/* Loading / waveform indicator */}
+              {isActive && (loading || speaking) && (
                 <div style={{ display: "flex", gap: 3, alignItems: "center", marginTop: 10, paddingLeft: 28 }}>
-                  {[8, 14, 10, 18, 12, 8].map((h, j) => (
-                    <div key={j} style={{
-                      width: 3, height: h, borderRadius: 2, background: accent,
-                      animation: `tts-wave 0.55s ease-in-out ${j * 0.08}s infinite alternate`,
-                    }} />
-                  ))}
-                  <span style={{ fontSize: 10, color: accent, marginLeft: 6, letterSpacing: 0.4 }}>朗读中</span>
+                  {loading ? (
+                    <span style={{ fontSize: 10, color: accent, letterSpacing: 0.4, opacity: 0.7 }}>加载中…</span>
+                  ) : (
+                    <>
+                      {[8, 14, 10, 18, 12, 8].map((h, j) => (
+                        <div key={j} style={{
+                          width: 3, height: h, borderRadius: 2, background: accent,
+                          animation: `tts-wave 0.55s ease-in-out ${j * 0.08}s infinite alternate`,
+                        }} />
+                      ))}
+                      <span style={{ fontSize: 10, color: accent, marginLeft: 6 }}>朗读中</span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -179,12 +231,30 @@ export default function VideoCard({ post, isActive, cardIndex }) {
       {/* ── SOCIAL ROW ── */}
       <div style={{
         flexShrink: 0, display: "flex", alignItems: "center",
-        padding: "8px 20px", gap: 20,
+        padding: "8px 16px", gap: 12,
         borderTop: "0.5px solid rgba(255,255,255,0.06)",
       }} onClick={e => e.stopPropagation()}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", flex: 1 }}>
-          点击台词朗读
-        </span>
+        {/* Voice picker */}
+        <div style={{ position: "relative", flex: 1 }}>
+          <select
+            value={voice}
+            onChange={e => setVoice(e.target.value)}
+            style={{
+              appearance: "none", WebkitAppearance: "none",
+              background: `${accent}14`, border: `1px solid ${accent}30`,
+              borderRadius: 8, padding: "4px 24px 4px 9px",
+              color: accent, fontSize: 11, fontWeight: 600, cursor: "pointer",
+              outline: "none", width: "100%",
+            }}
+          >
+            {VOICES.map(v => (
+              <option key={v.id} value={v.id} style={{ background: "#111", color: "#fff" }}>
+                {v.label} · {v.desc}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={11} color={accent} style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        </div>
         <SocialBtn
           icon={<Heart size={18} fill={liked ? "#ff3b5c" : "none"} color={liked ? "#ff3b5c" : "rgba(255,255,255,0.5)"} strokeWidth={1.5} />}
           label={fmt(likes)}
