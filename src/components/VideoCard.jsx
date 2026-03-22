@@ -1,5 +1,31 @@
-import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Heart, MessageCircle, Share2, Bookmark, ChevronRight, Volume2, VolumeX } from "lucide-react";
+
+function useTTS() {
+  const [speaking, setSpeaking] = useState(false);
+  const uttRef = useRef(null);
+
+  const speak = useCallback((text) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = "en-US";
+    utt.rate = 0.88;
+    utt.pitch = 1;
+    utt.onstart = () => setSpeaking(true);
+    utt.onend = () => setSpeaking(false);
+    utt.onerror = () => setSpeaking(false);
+    uttRef.current = utt;
+    window.speechSynthesis.speak(utt);
+  }, []);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+  }, []);
+
+  return { speaking, speak, stop };
+}
 
 const fmt = (n) =>
   n >= 10000 ? (n / 10000).toFixed(1) + "w" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : n;
@@ -22,17 +48,23 @@ export default function VideoCard({ post, isActive, cardIndex }) {
   const [saved, setSaved] = useState(false);
   const [likes, setLikes] = useState(post.likes);
   const [vocabOpen, setVocabOpen] = useState(false);
+  const { speaking, speak, stop } = useTTS();
 
   const { bg, accent } = THEMES[cardIndex % THEMES.length];
   const sub = post.subtitles[subIdx];
   const total = post.subtitles.length;
 
-  // Reset subtitle index when card scrolls away
+  // Stop speech when card scrolls away or subtitle changes
   useEffect(() => {
-    if (!isActive) setSubIdx(0);
-  }, [isActive]);
+    if (!isActive) { stop(); setSubIdx(0); }
+  }, [isActive, stop]);
+  useEffect(() => { stop(); }, [subIdx, stop]);
 
   const handleTap = () => setSubIdx(i => (i + 1) % total);
+  const handleSpeak = (e) => {
+    e.stopPropagation();
+    speaking ? stop() : speak(sub.en);
+  };
 
   return (
     <div
@@ -90,14 +122,46 @@ export default function VideoCard({ post, isActive, cardIndex }) {
           ))}
         </div>
 
-        {/* English */}
-        <div style={{
-          fontSize: 27, fontWeight: 600, color: "#fff", lineHeight: 1.5,
-          letterSpacing: -0.4,
-          fontFamily: '-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif',
-          marginBottom: 18,
-        }}>
-          &ldquo;{sub.en}&rdquo;
+        {/* English + speak button */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{
+            fontSize: 27, fontWeight: 600, color: "#fff", lineHeight: 1.5,
+            letterSpacing: -0.4,
+            fontFamily: '-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif',
+          }}>
+            &ldquo;{sub.en}&rdquo;
+          </div>
+          <button
+            onClick={handleSpeak}
+            style={{
+              marginTop: 12,
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: speaking ? accent + "22" : "rgba(255,255,255,0.07)",
+              border: `1px solid ${speaking ? accent + "55" : "rgba(255,255,255,0.1)"}`,
+              borderRadius: 20, padding: "5px 14px",
+              cursor: "pointer", transition: "all 0.2s",
+            }}
+          >
+            {speaking
+              ? <VolumeX size={13} color={accent} strokeWidth={2} />
+              : <Volume2 size={13} color="rgba(255,255,255,0.5)" strokeWidth={2} />}
+            <span style={{
+              fontSize: 11, letterSpacing: 0.6,
+              color: speaking ? accent : "rgba(255,255,255,0.38)",
+            }}>
+              {speaking ? "停止" : "朗读"}
+            </span>
+            {speaking && (
+              <span style={{ display: "flex", gap: 2, alignItems: "center" }}>
+                {[0, 0.15, 0.3].map(d => (
+                  <span key={d} style={{
+                    width: 3, height: 10, borderRadius: 2, background: accent,
+                    animation: `tts-wave 0.7s ease-in-out ${d}s infinite alternate`,
+                  }} />
+                ))}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Chinese */}

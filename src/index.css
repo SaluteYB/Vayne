@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@keyframes tts-wave {
+  from { transform: scaleY(0.4); opacity: 0.5; }
+  to   { transform: scaleY(1.2); opacity: 1; }
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
