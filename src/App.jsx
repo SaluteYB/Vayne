@@ -13,17 +13,11 @@ const NAV = [
   { id: "profile", label: "我的" },
 ];
 
-// Gradient per card slot — visible even if VideoCard crashes
-const SLOT_BG = [
-  "radial-gradient(ellipse at 22% 28%, #1b2d4f 0%, #070d1c 100%)",
-  "radial-gradient(ellipse at 78% 72%, #28142e 0%, #0a0509 100%)",
-  "radial-gradient(ellipse at 38% 22%, #0b1f14 0%, #040908 100%)",
-  "radial-gradient(ellipse at 64% 78%, #221710 0%, #0d0905 100%)",
-  "radial-gradient(ellipse at 18% 62%, #14101d 0%, #08040e 100%)",
-  "linear-gradient(145deg, #0d1117 0%, #161d2c 45%, #0d1117 100%)",
-  "radial-gradient(ellipse at 50% 50%, #161616 0%, #080808 100%)",
-  "radial-gradient(ellipse at 30% 68%, #1c1608 0%, #0c0a04 100%)",
-];
+// Infinite feed — repeat posts 60 times (~480 cards)
+const FEED = Array.from({ length: 60 }, (_, i) => ({
+  ...posts[i % posts.length],
+  _feedIdx: i,
+}));
 
 export default function App() {
   const [tab, setTab] = useState("feed");
@@ -58,13 +52,12 @@ export default function App() {
             scrollbarWidth: "none",
           }}
         >
-          {posts.map((post, i) => (
+          {FEED.map((post, i) => (
             <div
-              key={post.id}
+              key={post._feedIdx}
               style={{
                 width: "100%", height: "100vh",
                 scrollSnapAlign: "start", scrollSnapStop: "always",
-                background: SLOT_BG[i % SLOT_BG.length],
                 overflow: "hidden",
               }}
             >
