@@ -3,13 +3,15 @@ import VideoCard from "./components/VideoCard";
 import Typing from "./components/Typing";
 import CheckIn from "./components/CheckIn";
 import Profile from "./components/Profile";
+import Trading from "./components/Trading";
 import { posts } from "./data/content";
 import "./index.css";
 
 const NAV = [
-  { id: "feed", label: "学习" },
-  { id: "typing", label: "打字" },
+  { id: "feed",    label: "学习" },
+  { id: "typing",  label: "打字" },
   { id: "checkin", label: "打卡" },
+  { id: "trading", label: "交易" },
   { id: "profile", label: "我的" },
 ];
 
@@ -81,9 +83,10 @@ export default function App() {
           </div>
           <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px 32px" }}>
-              {tab === "typing"  && <Typing />}
-              {tab === "checkin" && <CheckIn />}
-              {tab === "profile" && <Profile />}
+              {tab === "typing"   && <Typing />}
+              {tab === "checkin"  && <CheckIn />}
+              {tab === "trading"  && <Trading />}
+              {tab === "profile"  && <Profile />}
             </div>
           </div>
         </div>
