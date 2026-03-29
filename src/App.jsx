@@ -3,14 +3,16 @@ import VideoCard from "./components/VideoCard";
 import Typing from "./components/Typing";
 import CheckIn from "./components/CheckIn";
 import Profile from "./components/Profile";
+import RealEstate from "./components/RealEstate";
 import { posts } from "./data/content";
 import "./index.css";
 
 const NAV = [
-  { id: "feed", label: "学习" },
-  { id: "typing", label: "打字" },
-  { id: "checkin", label: "打卡" },
-  { id: "profile", label: "我的" },
+  { id: "feed",       label: "学习" },
+  { id: "typing",     label: "打字" },
+  { id: "checkin",    label: "打卡" },
+  { id: "realestate", label: "房产" },
+  { id: "profile",    label: "我的" },
 ];
 
 // Infinite feed — repeat posts 60 times (~480 cards)
@@ -77,13 +79,16 @@ export default function App() {
             borderBottom: "0.5px solid rgba(255,255,255,0.07)",
             display: "flex", alignItems: "center", padding: "0 20px",
           }}>
-            <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: -0.5 }}>英语打卡</span>
+            <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: -0.5 }}>
+              {tab === "realestate" ? "趋势房产" : "英语打卡"}
+            </span>
           </div>
           <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 16px 32px" }}>
-              {tab === "typing"  && <Typing />}
-              {tab === "checkin" && <CheckIn />}
-              {tab === "profile" && <Profile />}
+              {tab === "typing"      && <Typing />}
+              {tab === "checkin"     && <CheckIn />}
+              {tab === "realestate"  && <RealEstate />}
+              {tab === "profile"     && <Profile />}
             </div>
           </div>
         </div>
