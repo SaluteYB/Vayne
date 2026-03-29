@@ -362,28 +362,52 @@ function ListingsPanel({ city, onClose }) {
             const total = (item.priceSqm * item.size / 10000).toFixed(0);
             const cutColor = item.cut < -5 ? "#ef4444" : item.cut < -3 ? ACCENT : "rgba(255,255,255,0.4)";
             return (
-              <div key={i} style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 16, padding: "14px", marginBottom: 10,
-              }}>
+              <div key={i}
+                onClick={() => window.open(item.url, "_blank")}
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 16, padding: "14px", marginBottom: 10,
+                  cursor: "pointer", active: { opacity: 0.7 },
+                }}>
                 {/* Top row */}
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>{item.community}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                  <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>{item.community}</span>
+                      <ChevronRight size={13} color="rgba(255,255,255,0.25)" />
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
                       {item.district} · {item.rooms} · {item.size}㎡ · {item.floor} · {item.toward}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                      {item.buildYear}年建 · {item.elevator ? "有电梯" : "无电梯"}
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: ACCENT }}>{total}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>万</span></div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{item.priceSqm.toLocaleString()}元/㎡</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: ACCENT, lineHeight: 1 }}>
+                      {total}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>万</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                      {item.priceSqm.toLocaleString()}元/㎡
+                    </div>
                   </div>
                 </div>
-                {/* Bottom row */}
-                <div style={{ display: "flex", gap: 16 }}>
-                  <Tag label="在售" value={`${item.dom}天`} color="rgba(255,255,255,0.3)" />
+                {/* Tags */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+                  {item.tags.map(t => (
+                    <span key={t} style={{
+                      fontSize: 10, padding: "2px 7px", borderRadius: 5,
+                      background: "rgba(245,158,11,0.1)", color: ACCENT,
+                      border: "1px solid rgba(245,158,11,0.2)",
+                    }}>{t}</span>
+                  ))}
+                </div>
+                {/* Stats row */}
+                <div style={{ display: "flex", gap: 16, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <Tag label="在售" value={`${item.dom}天`} color="rgba(255,255,255,0.4)" />
                   <Tag label="降价" value={`${item.cut}%`} color={cutColor} />
+                  <span style={{ marginLeft: "auto", fontSize: 10, color: "rgba(255,255,255,0.2)" }}>贝壳查看 →</span>
                 </div>
               </div>
             );
