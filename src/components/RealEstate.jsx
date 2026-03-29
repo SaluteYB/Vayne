@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TrendingUp, TrendingDown, MapPin, BarChart2, Activity, ChevronRight, AlertCircle, Send } from "lucide-react";
-import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET, DATA_SOURCE, DATA_DATE, DATA_METHOD } from "../data/realEstateData";
+import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET, LISTINGS, DATA_SOURCE, DATA_DATE, DATA_METHOD } from "../data/realEstateData";
 
 const ACCENT = "#f59e0b";
 
@@ -327,9 +327,89 @@ function HotTab({ city }) {
   );
 }
 
+// ── Listings panel ────────────────────────────────────────────────────────────
+function ListingsPanel({ city, onClose }) {
+  const items = LISTINGS[city] ?? [];
+  const cityName = CITIES.find(c => c.id === city)?.name ?? "";
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 999,
+      background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "flex-end",
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: "100%", maxHeight: "85vh",
+        background: "#141414", borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", padding: "18px 16px 12px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>{cityName} · 挂牌详情</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+              来源：安居客 · 链家 · 贝壳 · 2026年3月采集
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", padding: "0 4px" }}>×</button>
+        </div>
+
+        {/* List */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "12px 16px 32px", WebkitOverflowScrolling: "touch" }}>
+          {items.map((item, i) => {
+            const total = (item.priceSqm * item.size / 10000).toFixed(0);
+            const cutColor = item.cut < -5 ? "#ef4444" : item.cut < -3 ? ACCENT : "rgba(255,255,255,0.4)";
+            return (
+              <div key={i} style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 16, padding: "14px", marginBottom: 10,
+              }}>
+                {/* Top row */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>{item.community}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                      {item.district} · {item.rooms} · {item.size}㎡ · {item.floor} · {item.toward}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: ACCENT }}>{total}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>万</span></div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{item.priceSqm.toLocaleString()}元/㎡</div>
+                  </div>
+                </div>
+                {/* Bottom row */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <Tag label="在售" value={`${item.dom}天`} color="rgba(255,255,255,0.3)" />
+                  <Tag label="降价" value={`${item.cut}%`} color={cutColor} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 8 }}>
+            以上为样本挂牌数据，非全量，仅供参考
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Tag({ label, value, color }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color }}>{value}</span>
+    </div>
+  );
+}
+
 // ── Market tab ────────────────────────────────────────────────────────────────
 function MarketTab({ city }) {
   const m = MARKET[city];
+  const [showListings, setShowListings] = useState(false);
   const signalColor =
     m.signal === "做多" ? "#22c55e" : m.signal === "做空" ? "#ef4444" : ACCENT;
 
@@ -386,12 +466,13 @@ function MarketTab({ city }) {
             {m.newListings.toLocaleString()}
           </span>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>套</span>
-          <span style={{
-            marginLeft: "auto", fontSize: 11, color: "rgba(255,255,255,0.25)",
+          <button onClick={() => setShowListings(true)} style={{
+            marginLeft: "auto", fontSize: 11, color: ACCENT,
             display: "flex", alignItems: "center", gap: 3,
+            background: "none", border: "none", cursor: "pointer", padding: 0,
           }}>
-            查看挂牌详情 <ChevronRight size={12} color="rgba(255,255,255,0.2)" />
-          </span>
+            查看挂牌详情 <ChevronRight size={12} color={ACCENT} />
+          </button>
         </div>
         {/* simple bar */}
         <div style={{ marginTop: 14, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
@@ -402,6 +483,7 @@ function MarketTab({ city }) {
           }} />
         </div>
       </div>
+      {showListings && <ListingsPanel city={city} onClose={() => setShowListings(false)} />}
     </div>
   );
 }
