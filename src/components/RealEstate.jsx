@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { TrendingUp, TrendingDown, MapPin, BarChart2, Activity, ChevronRight } from "lucide-react";
-import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET } from "../data/realEstateData";
+import { useState } from "react";
+import { TrendingUp, TrendingDown, MapPin, BarChart2, Activity, ChevronRight, AlertCircle, Send } from "lucide-react";
+import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET, DATA_SOURCE, DATA_DATE } from "../data/realEstateData";
 
 const ACCENT = "#f59e0b";
 
@@ -427,6 +427,94 @@ function StatCard({ label, value, unit, icon, accent = ACCENT }) {
   );
 }
 
+// ── Disclaimer banner ─────────────────────────────────────────────────────────
+function Disclaimer() {
+  const [visible, setVisible] = useState(true);
+  if (!visible) return null;
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 8,
+      background: "rgba(245,158,11,0.08)",
+      border: "1px solid rgba(245,158,11,0.2)",
+      borderRadius: 12, padding: "10px 12px", marginBottom: 12,
+    }}>
+      <AlertCircle size={14} color={ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
+      <div style={{ flex: 1, fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+        数据来源：{DATA_SOURCE}（{DATA_DATE}）。价格为参考均价，非实时成交价，仅供参考，不构成投资建议。
+      </div>
+      <button onClick={() => setVisible(false)} style={{
+        background: "none", border: "none", color: "rgba(255,255,255,0.25)",
+        fontSize: 16, cursor: "pointer", padding: 0, flexShrink: 0, lineHeight: 1,
+      }}>×</button>
+    </div>
+  );
+}
+
+// ── User feedback modal ───────────────────────────────────────────────────────
+function FeedbackModal({ city, onClose }) {
+  const [area, setArea]   = useState("");
+  const [price, setPrice] = useState("");
+  const [note, setNote]   = useState("");
+  const [sent, setSent]   = useState(false);
+
+  const submit = () => {
+    if (!area || !price) return;
+    // Store locally (no backend)
+    const records = JSON.parse(localStorage.getItem("re_feedback") || "[]");
+    records.unshift({ city, area, price, note, ts: Date.now() });
+    localStorage.setItem("re_feedback", JSON.stringify(records.slice(0, 50)));
+    setSent(true);
+  };
+
+  const inp = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 10, padding: "10px 12px",
+    color: "#fff", fontSize: 14, outline: "none", width: "100%",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 999,
+      background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "flex-end",
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: "100%", background: "#141414",
+        borderRadius: "20px 20px 0 0",
+        padding: "20px 20px 40px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
+          <span style={{ fontWeight: 700, fontSize: 16, color: "#fff", flex: 1 }}>纠错 / 提交数据</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>×</button>
+        </div>
+
+        {sent ? (
+          <div style={{ textAlign: "center", padding: "24px 0" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
+            <div style={{ color: "#22c55e", fontWeight: 700, fontSize: 16 }}>已保存到本地</div>
+            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 6 }}>感谢你的反馈</div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input style={inp} placeholder="板块名称（如：朝阳区 / 某小区）" value={area} onChange={e => setArea(e.target.value)} />
+            <input style={inp} placeholder="实际成交价（元/㎡，如：58000）" type="number" value={price} onChange={e => setPrice(e.target.value)} />
+            <textarea style={{ ...inp, height: 72, resize: "none" }} placeholder="补充说明（可选，如：2025年3月成交）" value={note} onChange={e => setNote(e.target.value)} />
+            <button onClick={submit} style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              background: ACCENT, border: "none", borderRadius: 12,
+              padding: "13px", color: "#000", fontWeight: 700, fontSize: 15, cursor: "pointer",
+            }}>
+              <Send size={15} /> 提交
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 const SUB_TABS = [
   { id: "trend",  label: "趋势" },
@@ -435,15 +523,17 @@ const SUB_TABS = [
 ];
 
 export default function RealEstate() {
-  const [city, setCity] = useState("sh");
-  const [tab, setTab]   = useState("trend");
-
-  const cityName = CITIES.find((c) => c.id === city)?.name ?? "";
+  const [city, setCity]         = useState("sh");
+  const [tab, setTab]           = useState("trend");
+  const [showFeedback, setShowFeedback] = useState(false);
 
   return (
     <div style={{ minHeight: "100%", paddingBottom: 32 }}>
+      {/* Disclaimer */}
+      <Disclaimer />
+
       {/* City selector */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 12 }}>
         <div style={{
           display: "flex", gap: 8,
           overflowX: "auto", scrollbarWidth: "none",
@@ -503,6 +593,20 @@ export default function RealEstate() {
       {tab === "trend"  && <TrendTab  city={city} />}
       {tab === "hot"    && <HotTab    city={city} />}
       {tab === "market" && <MarketTab city={city} />}
+
+      {/* Feedback button */}
+      <button onClick={() => setShowFeedback(true)} style={{
+        display: "flex", alignItems: "center", gap: 6,
+        margin: "20px auto 0", padding: "8px 18px",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 20, color: "rgba(255,255,255,0.35)",
+        fontSize: 12, cursor: "pointer",
+      }}>
+        <AlertCircle size={12} /> 数据有误？点击纠错
+      </button>
+
+      {showFeedback && <FeedbackModal city={city} onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }
