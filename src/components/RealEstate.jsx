@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TrendingUp, TrendingDown, MapPin, BarChart2, Activity, ChevronRight, AlertCircle, Send } from "lucide-react";
-import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET, DATA_SOURCE, DATA_DATE } from "../data/realEstateData";
+import { CITIES, PRICE_HISTORY, MONTHS, HOT_AREAS, MARKET, DATA_SOURCE, DATA_DATE, DATA_METHOD } from "../data/realEstateData";
 
 const ACCENT = "#f59e0b";
 
@@ -429,23 +429,47 @@ function StatCard({ label, value, unit, icon, accent = ACCENT }) {
 
 // ── Disclaimer banner ─────────────────────────────────────────────────────────
 function Disclaimer() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div style={{
-      display: "flex", alignItems: "flex-start", gap: 8,
-      background: "rgba(245,158,11,0.08)",
-      border: "1px solid rgba(245,158,11,0.2)",
-      borderRadius: 12, padding: "10px 12px", marginBottom: 12,
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 12, marginBottom: 12, overflow: "hidden",
     }}>
-      <AlertCircle size={14} color={ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
-      <div style={{ flex: 1, fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
-        数据来源：{DATA_SOURCE}（{DATA_DATE}）。价格为参考均价，非实时成交价，仅供参考，不构成投资建议。
-      </div>
-      <button onClick={() => setVisible(false)} style={{
-        background: "none", border: "none", color: "rgba(255,255,255,0.25)",
-        fontSize: 16, cursor: "pointer", padding: 0, flexShrink: 0, lineHeight: 1,
-      }}>×</button>
+      {/* Header row */}
+      <button onClick={() => setExpanded(e => !e)} style={{
+        width: "100%", display: "flex", alignItems: "center", gap: 7,
+        background: "none", border: "none", padding: "10px 12px",
+        cursor: "pointer", textAlign: "left",
+      }}>
+        <AlertCircle size={13} color={ACCENT} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+          {DATA_SOURCE} · {DATA_DATE} · {DATA_METHOD}
+        </span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>{expanded ? "▲" : "注释"}</span>
+      </button>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{
+          padding: "0 12px 12px",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          {[
+            ["编制方法", "以底层小区为成分，成交额为权重，重复交易法为统计方法，逐周聚合而成。"],
+            ["数据来源", "统计局、房管局、经纪商；统计口径为二手房小区，显示价格为边际挂价。"],
+            ["特别说明", "目标是准确、敏感、低噪地追踪趋势变化。已剔除结构性失真与成交滞后干扰。成交、上架、撤牌、调价均贡献趋势变化。"],
+            ["更新时间", "每周一更新。"],
+            ["免责声明", "本数据仅供参考，不构成投资建议，投资须以专业机构数据为准。"],
+          ].map(([title, desc]) => (
+            <div key={title} style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginBottom: 3 }}>{title}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
